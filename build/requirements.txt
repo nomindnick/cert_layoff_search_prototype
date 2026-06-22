@@ -1,0 +1,5 @@
+# Offline build pipeline — core deps (BM25-only v1 build, no torch).
+# Used by build_index.py / build_records.py. convert_docs.py needs LibreOffice
+# (system package), upload_r2.py needs the wrangler CLI (node) — not pip deps.
+numpy>=1.26
+rank-bm25>=0.2.2

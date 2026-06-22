@@ -1,0 +1,18 @@
+# Backend runtime dependencies (cert_layoff_search_prototype)
+# Serving-only deps: NO torch / sentence-transformers here.
+# The offline embedding build pulls its heavy deps from build/requirements-embed.txt.
+# Hybrid search at serve time (EMBED_BACKEND=arctic|openai) is opt-in and installs
+# its encoder separately; the default v1 image serves BM25-only and boots cheap/fast.
+
+fastapi
+uvicorn[standard]
+numpy
+rank-bm25
+pydantic
+pydantic-settings
+sqlalchemy
+httpx
+python-multipart
+xhtml2pdf
+jinja2
+psycopg[binary]

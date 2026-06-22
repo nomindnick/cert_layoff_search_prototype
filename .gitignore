@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Node / frontend ---
+node_modules/
+dist/
+frontend/dist/
+
+# --- Build artifacts (rebuilt offline, pulled from R2 at runtime) ---
+build/output/
+build/corpus_slice/
+*.pkl
+records.json
+metadata.json
+
+# --- Local databases ---
+events.db
+*.sqlite
+*.sqlite3
+
+# --- Secrets / local env ---
+.env
+.env.local
+.env.*.local
+
+# --- Editor / OS ---
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,5 @@
+# Optional embedding deps — only needed for `build_index.py --embed`
+# (arctic-l-v2 vectors). The v1 default build is --no-embed and needs none of
+# this. Install on top of requirements.txt:  pip install -r requirements-embed.txt
+sentence-transformers>=3.0
+torch>=2.2

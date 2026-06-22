@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{ title }}</title>
+<style type="text/css">
+  /* xhtml2pdf supports a simple CSS subset: keep selectors/properties basic. */
+  @page { size: letter; margin: 1in 0.9in; }
+  body {
+    font-family: "Times New Roman", Georgia, serif;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #1a1a1a;
+  }
+  h1 {
+    font-size: 16pt;
+    text-align: center;
+    margin: 0 0 4pt 0;
+    font-weight: bold;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 10pt;
+    font-style: italic;
+    color: #555555;
+    margin: 0 0 14pt 0;
+  }
+  .preamble {
+    font-size: 10pt;
+    color: #333333;
+    margin: 0 0 10pt 0;
+    text-align: justify;
+  }
+  .statbox {
+    border: 1px solid #cccccc;
+    background-color: #f6f4f0;
+    padding: 7pt 10pt;
+    margin: 0 0 16pt 0;
+    font-size: 9.5pt;
+    color: #333333;
+  }
+  .statbox .stat { display: inline; margin-right: 14pt; }
+  .statbox .label { color: #777777; }
+  .statbox .value { font-weight: bold; color: #1a1a1a; }
+  hr.rule { border: 0; border-top: 1px solid #dddddd; margin: 14pt 0; }
+  h2.section {
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 16pt 0 8pt 0;
+    padding-bottom: 2pt;
+    border-bottom: 1px solid #999999;
+  }
+  .entry {
+    margin: 0 0 9pt 0;
+    text-align: justify;
+  }
+  .entry .num { font-weight: bold; }
+  .cite { white-space: nowrap; }
+  a { color: #14532d; text-decoration: none; }
+  .empty { font-style: italic; color: #777777; margin: 16pt 0; }
+  .footer {
+    margin-top: 20pt;
+    padding-top: 6pt;
+    border-top: 1px solid #dddddd;
+    font-size: 8.5pt;
+    color: #888888;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+  <h1>{{ title }}</h1>
+  <div class="subtitle">
+    Generated from the structured decision corpus &mdash; {{ generated_at }}
+  </div>
+
+  <div class="preamble">
+    This summary was assembled automatically from a structured corpus of
+    California Office of Administrative Hearings proposed decisions in
+    certificated-employee layoff proceedings under Education Code sections 44949
+    and 44955. Every holding is anchored to verbatim quotations from the
+    decision text; this document is a deterministic assembly over those records,
+    not a generated synthesis. It covers
+    <strong>{{ n_holdings }}</strong> catalogued holding{{ '' if n_holdings == 1 else 's' }}
+    across <strong>{{ n_decisions }}</strong> decision{{ '' if n_decisions == 1 else 's' }}
+    ({{ category_label }}, {{ year_label }}). Citations follow the traditional
+    Layoff Decision Summaries convention &mdash; district and administrative law
+    judge surname &mdash; with respondents identified pseudonymously.
+  </div>
+
+  <div class="statbox">
+    {% if corpus_stats %}
+      {% if corpus_stats.n_decisions is not none %}
+      <span class="stat"><span class="label">Corpus decisions:</span>
+        <span class="value">{{ corpus_stats.n_decisions }}</span></span>
+      {% endif %}
+      {% if corpus_stats.n_holdings is not none %}
+      <span class="stat"><span class="label">Corpus holdings:</span>
+        <span class="value">{{ corpus_stats.n_holdings }}</span></span>
+      {% endif %}
+      {% if corpus_stats.year_min is not none and corpus_stats.year_max is not none %}
+      <span class="stat"><span class="label">Corpus span:</span>
+        <span class="value">{{ corpus_stats.year_min }}&ndash;{{ corpus_stats.year_max }}</span></span>
+      {% endif %}
+      {% if corpus_stats.baseline_district_win_rate is not none %}
+      <span class="stat"><span class="label">Baseline district win rate:</span>
+        <span class="value">{{ '%.0f' | format(corpus_stats.baseline_district_win_rate * 100) }}%</span></span>
+      {% endif %}
+    {% endif %}
+    <span class="stat"><span class="label">This report:</span>
+      <span class="value">{{ n_holdings }} holding{{ '' if n_holdings == 1 else 's' }}</span>
+      in <span class="value">{{ n_sections }} section{{ '' if n_sections == 1 else 's' }}</span></span>
+  </div>
+
+  {% if filters.district or filters.alj %}
+  <div class="preamble">
+    Filtered to
+    {% if filters.district %}district matching &ldquo;{{ filters.district }}&rdquo;{% endif %}
+    {% if filters.district and filters.alj %} and {% endif %}
+    {% if filters.alj %}ALJ matching &ldquo;{{ filters.alj }}&rdquo;{% endif %}.
+  </div>
+  {% endif %}
+
+  <hr class="rule" />
+
+  {% if groups %}
+    {% for group in groups %}
+    <h2 class="section">{{ group.roman }}. {{ group.title }}</h2>
+      {% for entry in group.entries %}
+      <p class="entry">
+        <span class="num">{{ loop.index }}.</span>
+        <a href="/decision/{{ entry.case_no }}">{{ entry.text }}</a>
+      </p>
+      {% endfor %}
+    {% endfor %}
+  {% else %}
+    <p class="empty">
+      No holdings match the selected filters. Broaden the issue categories or
+      year range and try again.
+    </p>
+  {% endif %}
+
+  <div class="footer">
+    Deterministic assembly from quote-anchored decision records. No generative
+    AI was used to produce this document. Generated {{ generated_at }}.
+  </div>
+
+</body>
+</html>
