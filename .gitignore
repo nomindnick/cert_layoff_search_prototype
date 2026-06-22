@@ -30,6 +30,10 @@ events.db
 .env.local
 .env.*.local
 
+# --- Deploy CLI local state ---
+.wrangler/
+.railway/
+
 # --- Editor / OS ---
 .DS_Store
 .idea/
