@@ -66,8 +66,22 @@ _INSTRUCTIONS = (
 )
 
 if AUTH_ENABLED:
+    from urllib.parse import urlparse
+
+    from mcp.server.transport_security import TransportSecuritySettings
+
     from backend.mcp_auth import build_auth_settings, consent_routes  # noqa: F401
     from backend.mcp_auth import provider as _auth_provider
+
+    # DNS-rebinding protection rejects any Host not in the allowlist (default is
+    # localhost only). Behind Railway's proxy the Host is our public domain, so
+    # allow exactly that (derived from PUBLIC_BASE_URL) — else /mcp returns 421
+    # "Invalid Host header".
+    _base = settings.PUBLIC_BASE_URL.rstrip("/")
+    _security = TransportSecuritySettings(
+        allowed_hosts=[urlparse(_base).netloc],
+        allowed_origins=[_base],
+    )
 
     mcp = FastMCP(
         "cert-layoff-corpus",
@@ -75,6 +89,7 @@ if AUTH_ENABLED:
         stateless_http=True,
         auth=build_auth_settings(),
         auth_server_provider=_auth_provider,
+        transport_security=_security,
     )
 else:
     mcp = FastMCP("cert-layoff-corpus", instructions=_INSTRUCTIONS, stateless_http=True)
