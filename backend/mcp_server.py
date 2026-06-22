@@ -27,6 +27,7 @@ import logging
 
 from mcp.server.fastmcp import Context, FastMCP
 
+from backend.config import settings
 from backend.search.aggregate import compute_insight
 from backend.search.engine import COLLECTIONS
 from backend.store import store
@@ -47,43 +48,61 @@ logger = logging.getLogger(__name__)
 # stateless_http=True: each request is self-contained (robust behind Railway's
 # proxy, single replica). Default streamable_http_path="/mcp" — main.py lifts the
 # resulting Route("/mcp") into the app so the canonical no-slash URL resolves.
-mcp = FastMCP(
-    "cert-layoff-corpus",
-    instructions=(
-        "Structured search over California OAH proposed decisions on certificated "
-        "(teacher) layoffs. The unit is the HOLDING, grouped by decision. Results "
-        "are non-precedential and de-identified to 'District (ALJ)'. IMPORTANT: "
-        "outcome data skews ~79% district-win corpus-wide — always read a slice's "
-        "win_rate against insight.win_rate.baseline_district, never as a bare "
-        "percentage. Every result is traceable to a real decision via its "
-        "holding_id / oah_case_no; cite those, and prefer quoting the returned "
-        "summary over inferring new holdings."
-    ),
-    stateless_http=True,
+#
+# AUTH_ENABLED: when PUBLIC_BASE_URL is set, the MCP surface requires OAuth
+# (claude.ai connectors). The mcp SDK then auto-mounts the OAuth endpoints and
+# enforces a bearer token on the tools. Empty = no auth (local dev only).
+AUTH_ENABLED = bool(settings.PUBLIC_BASE_URL)
+
+_INSTRUCTIONS = (
+    "Structured search over California OAH proposed decisions on certificated "
+    "(teacher) layoffs. The unit is the HOLDING, grouped by decision. Results "
+    "are non-precedential and de-identified to 'District (ALJ)'. IMPORTANT: "
+    "outcome data skews ~79% district-win corpus-wide — always read a slice's "
+    "win_rate against insight.win_rate.baseline_district, never as a bare "
+    "percentage. Every result is traceable to a real decision via its "
+    "holding_id / oah_case_no; cite those, and prefer quoting the returned "
+    "summary over inferring new holdings."
 )
+
+if AUTH_ENABLED:
+    from backend.mcp_auth import build_auth_settings, consent_routes  # noqa: F401
+    from backend.mcp_auth import provider as _auth_provider
+
+    mcp = FastMCP(
+        "cert-layoff-corpus",
+        instructions=_INSTRUCTIONS,
+        stateless_http=True,
+        auth=build_auth_settings(),
+        auth_server_provider=_auth_provider,
+    )
+else:
+    mcp = FastMCP("cert-layoff-corpus", instructions=_INSTRUCTIONS, stateless_http=True)
 
 
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
-def _request_token(ctx: Context) -> str | None:
-    """Best-effort caller identity from the HTTP request (header or bearer).
+def _caller(ctx: Context) -> str | None:
+    """Caller identity for analytics. Prefer the verified OAuth subject (which
+    IS the user's magic-link token, so MCP activity logs under the same user id
+    as the web app); fall back to a request header for the no-auth dev mode."""
+    try:
+        from mcp.server.auth.middleware.auth_context import get_access_token
 
-    Used only for analytics attribution in this phase; the OAuth layer will set
-    a verified identity later.
-    """
+        at = get_access_token()
+        if at is not None and at.subject:
+            return at.subject
+    except Exception:
+        pass
     try:
         req = ctx.request_context.request
-        if req is None:
-            return None
-        tok = req.headers.get("x-access-token")
-        if not tok:
-            auth = req.headers.get("authorization") or ""
-            if auth.lower().startswith("bearer "):
-                tok = auth[7:].strip()
-        return (tok or "").strip() or None
+        if req is not None:
+            tok = req.headers.get("x-access-token")
+            return (tok or "").strip() or None
     except Exception:
-        return None
+        pass
+    return None
 
 
 def _log(ctx: Context, event_type: str, **fields) -> None:
@@ -92,7 +111,7 @@ def _log(ctx: Context, event_type: str, **fields) -> None:
         from backend import db
 
         db.insert_event(
-            user_token=_request_token(ctx),
+            user_token=_caller(ctx),
             event_type=event_type,
             referrer="mcp",
             **fields,

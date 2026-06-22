@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # --- Runtime ---
     ENV: str = "development"
 
+    # --- MCP OAuth (remote connector). When set, the /mcp surface requires
+    # OAuth (claude.ai connectors); this is the issuer/resource base URL the
+    # server is reached at (e.g. https://app.example.com). Empty = /mcp is
+    # served WITHOUT auth (local dev / Phase-1 only — never expose publicly).
+    PUBLIC_BASE_URL: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

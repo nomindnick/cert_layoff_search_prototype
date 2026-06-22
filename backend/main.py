@@ -69,10 +69,15 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("store.load() failed at startup")
 
-        # Create the events table (owned by backend.db).
+        # Create the events table (owned by backend.db) and, when the MCP OAuth
+        # layer is on, its oauth_* tables (clients/codes/tokens persistence).
         try:
             from backend import db  # noqa: WPS433 (guarded cross-agent import)
             db.create_all()
+            if _MCP_APP is not None and getattr(mcp_server, "AUTH_ENABLED", False):
+                from backend import mcp_auth
+                mcp_auth.create_all()
+                logger.info("oauth tables ready")
             logger.info("events table ready")
         except Exception:
             logger.exception("db.create_all() failed (analytics may be unavailable)")
@@ -116,21 +121,36 @@ def _include_routers(application: FastAPI) -> None:
 
 _include_routers(app)
 
-# Wire the MCP server in BEFORE the SPA catch-all so /mcp isn't swallowed by it.
-# Starlette's Mount("/mcp") matches "/mcp/" but NOT bare "/mcp" (the canonical,
-# no-slash URL clients and the claude.ai connector use) — bare "/mcp" would fall
-# through to the SPA GET catch-all and 405 on POST. So lift FastMCP's exact
-# Route("/mcp") in (matches "/mcp", any method), and add a Mount for the
-# "/mcp/..." variants so a trailing slash also works.
+# Wire the MCP server in BEFORE the SPA catch-all so its routes aren't swallowed
+# by it. Lift the MCP app's routes (the bearer-protected /mcp Route plus, when
+# auth is enabled, the OAuth discovery/register/authorize/token/revoke routes at
+# the domain root) into our app. Starlette's Mount("/mcp") wouldn't match bare
+# "/mcp" (the canonical no-slash URL the connector uses); the lifted exact
+# Route("/mcp") does — and carries its bearer-auth wrapping.
 if _MCP_APP is not None:
     from starlette.routing import Mount
 
-    for _route in _MCP_APP.routes:  # the streamable-HTTP Route("/mcp")
+    for _route in _MCP_APP.routes:
         app.router.routes.append(_route)
-    app.router.routes.append(
-        Mount("/mcp", app=mcp_server.mcp.session_manager.handle_request)
-    )
-    logger.info("wired MCP server at /mcp (route + mount)")
+
+    # Apply the MCP app's auth middleware (Authentication + AuthContext) to our
+    # app, in reverse so Authentication stays outermost. They only parse bearer
+    # tokens; our X-Access-Token API routes are unaffected. Empty when no auth.
+    for _mw in reversed(_MCP_APP.user_middleware):
+        app.add_middleware(_mw.cls, *_mw.args, **_mw.kwargs)
+
+    if mcp_server.AUTH_ENABLED:
+        # The magic-link consent page backing the OAuth /authorize step.
+        for _route in mcp_server.consent_routes():
+            app.router.routes.append(_route)
+        logger.info("wired MCP server at /mcp WITH OAuth (+ consent page)")
+    else:
+        # Dev only (no auth): also accept the "/mcp/" slash variant. NOT added in
+        # auth mode — an unauthenticated Mount would bypass the /mcp bearer check.
+        app.router.routes.append(
+            Mount("/mcp", app=mcp_server.mcp.session_manager.handle_request)
+        )
+        logger.warning("wired MCP server at /mcp WITHOUT auth (dev mode only)")
 
 
 @app.get("/healthz")
@@ -159,8 +179,11 @@ if FRONTEND_DIST.is_dir():
         """Serve the SPA shell for any non-API client-side route. /api/* and
         /docs are matched by their own routes first (FastAPI route ordering),
         so they never reach this catch-all."""
-        candidate = FRONTEND_DIST / full_path
-        if full_path and candidate.is_file():
+        candidate = (FRONTEND_DIST / full_path).resolve()
+        # Containment check: never serve a file outside the built SPA dir, even
+        # if full_path contains '..' / encoded traversal (path-traversal LFI).
+        inside = candidate.is_relative_to(FRONTEND_DIST.resolve())
+        if full_path and inside and candidate.is_file():
             return FileResponse(candidate)
         return FileResponse(FRONTEND_DIST / "index.html")
 else:
