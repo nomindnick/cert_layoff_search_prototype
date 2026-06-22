@@ -16,3 +16,4 @@ python-multipart
 xhtml2pdf
 jinja2
 psycopg[binary]
+mcp

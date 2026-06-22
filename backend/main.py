@@ -37,27 +37,48 @@ FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 # Router module names to include under /api (owned by other agents).
 _ROUTER_MODULES = ("search", "decisions", "facets", "events", "reports", "alj")
 
+# MCP server (remote, streamable-HTTP) mounted at /mcp. Guarded so the core app
+# still boots if the `mcp` SDK isn't installed. Calling streamable_http_app()
+# here creates the session manager, whose lifespan we enter below.
+try:
+    from backend import mcp_server  # noqa: WPS433
+
+    _MCP_APP = mcp_server.mcp.streamable_http_app()
+    logger.info("MCP server initialised (mount at /mcp)")
+except Exception:
+    mcp_server = None  # type: ignore[assignment]
+    _MCP_APP = None
+    logger.warning("MCP server unavailable (mcp SDK missing?) — /mcp disabled", exc_info=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     t0 = time.monotonic()
 
-    # Load indexes/records/metadata into RAM (downloads from R2 if missing).
-    try:
-        store.load()
-    except Exception:
-        logger.exception("store.load() failed at startup")
+    from contextlib import AsyncExitStack
 
-    # Create the events table (owned by backend.db).
-    try:
-        from backend import db  # noqa: WPS433 (guarded cross-agent import)
-        db.create_all()
-        logger.info("events table ready")
-    except Exception:
-        logger.exception("db.create_all() failed (analytics may be unavailable)")
+    async with AsyncExitStack() as stack:
+        # The MCP session manager needs its lifespan running (a mounted ASGI
+        # sub-app's lifespan does not run automatically).
+        if _MCP_APP is not None:
+            await stack.enter_async_context(mcp_server.mcp.session_manager.run())
 
-    logger.info("Startup completed in %.1fs", time.monotonic() - t0)
-    yield
+        # Load indexes/records/metadata into RAM (downloads from R2 if missing).
+        try:
+            store.load()
+        except Exception:
+            logger.exception("store.load() failed at startup")
+
+        # Create the events table (owned by backend.db).
+        try:
+            from backend import db  # noqa: WPS433 (guarded cross-agent import)
+            db.create_all()
+            logger.info("events table ready")
+        except Exception:
+            logger.exception("db.create_all() failed (analytics may be unavailable)")
+
+        logger.info("Startup completed in %.1fs", time.monotonic() - t0)
+        yield
 
 
 app = FastAPI(title="Cert Layoff Search", lifespan=lifespan)
@@ -94,6 +115,22 @@ def _include_routers(application: FastAPI) -> None:
 
 
 _include_routers(app)
+
+# Wire the MCP server in BEFORE the SPA catch-all so /mcp isn't swallowed by it.
+# Starlette's Mount("/mcp") matches "/mcp/" but NOT bare "/mcp" (the canonical,
+# no-slash URL clients and the claude.ai connector use) — bare "/mcp" would fall
+# through to the SPA GET catch-all and 405 on POST. So lift FastMCP's exact
+# Route("/mcp") in (matches "/mcp", any method), and add a Mount for the
+# "/mcp/..." variants so a trailing slash also works.
+if _MCP_APP is not None:
+    from starlette.routing import Mount
+
+    for _route in _MCP_APP.routes:  # the streamable-HTTP Route("/mcp")
+        app.router.routes.append(_route)
+    app.router.routes.append(
+        Mount("/mcp", app=mcp_server.mcp.session_manager.handle_request)
+    )
+    logger.info("wired MCP server at /mcp (route + mount)")
 
 
 @app.get("/healthz")
