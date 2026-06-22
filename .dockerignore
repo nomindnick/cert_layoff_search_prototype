@@ -1,0 +1,28 @@
+# Build context hygiene — keep the image build (and Railway's context upload)
+# small and reproducible. Anything regenerated in-image or pulled from R2 at
+# runtime must NOT be copied from the host.
+
+# Python
+.venv/
+**/__pycache__/
+*.pyc
+
+# Node / frontend (npm ci + vite build regenerate these in-image)
+frontend/node_modules/
+frontend/dist/
+
+# Offline build artifacts (served from R2 at runtime, never baked in)
+build/output/
+build/corpus_slice/
+
+# Local analytics db + envs + VCS
+events.db
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+
+# Editor / OS cruft
+.DS_Store
+*.swp

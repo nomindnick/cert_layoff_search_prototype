@@ -63,8 +63,24 @@ events = Table(
 )
 
 
+def _normalize_db_url(url: str) -> str:
+    """Pin Postgres URLs to the installed driver (psycopg v3).
+
+    Railway / Heroku-style add-ons inject ``postgres://`` or ``postgresql://``.
+    SQLAlchemy maps both to psycopg2 by default, which is NOT in requirements
+    (we ship ``psycopg[binary]`` v3). Without this rewrite the events table
+    fails to initialise and every analytics insert is silently dropped, so
+    force the ``+psycopg`` (v3) dialect on any bare Postgres URL.
+    """
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
+
+
 def _make_engine():
-    url = settings.DATABASE_URL
+    url = _normalize_db_url(settings.DATABASE_URL)
     kwargs: dict = {"future": True, "pool_pre_ping": True}
     # sqlite + a threaded ASGI server needs check_same_thread disabled.
     if url.startswith("sqlite"):
