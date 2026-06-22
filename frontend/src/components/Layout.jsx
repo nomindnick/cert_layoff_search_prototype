@@ -53,6 +53,7 @@ export default function Layout() {
 
           <nav className="flex items-center gap-1 text-sm">
             <HeaderLink to="/">Search</HeaderLink>
+            <HeaderLink to="/alj">ALJ Profiles</HeaderLink>
             <HeaderLink to="/reports">Reports</HeaderLink>
           </nav>
 

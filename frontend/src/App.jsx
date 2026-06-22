@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import SearchPage from './pages/SearchPage'
 import DecisionPage from './pages/DecisionPage'
 import ReportsPage from './pages/ReportsPage'
+import AljIndexPage from './pages/AljIndexPage'
 import AljProfilePage from './pages/AljProfilePage'
 import NoAccess from './pages/NoAccess'
 
@@ -14,6 +15,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<SearchPage />} />
         <Route path="/decision/:caseNo" element={<DecisionPage />} />
+        <Route path="/alj" element={<AljIndexPage />} />
         <Route path="/alj/:name" element={<AljProfilePage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="*" element={<SearchPage />} />
