@@ -226,6 +226,9 @@ export default function SearchPage() {
 /* ── Empty / landing state: clickable category pills ─────────── */
 function EmptyState({ facets, onPick, onSearch }) {
   const cats = facets?.categories || []
+  // Read the corpus size from the live facets payload — hardcoding it here went
+  // stale the moment the corpus grew (it read "~679" against 1,544 decisions).
+  const nDecisions = facets?.corpus_stats?.n_decisions
   const examples = [
     'skipping for special education credential',
     'seniority tie-breaker criteria',
@@ -238,7 +241,8 @@ function EmptyState({ facets, onPick, onSearch }) {
         The shape of the law on teacher-layoff holdings
       </h2>
       <p className="text-text-secondary mb-8 max-w-xl mx-auto leading-relaxed">
-        Search ~679 California OAH decisions by the contested issue an ALJ resolved. See who
+        Search {nDecisions ? `${nDecisions.toLocaleString()} ` : ''}California OAH decisions by the
+        contested issue an ALJ resolved. See who
         prevails, on what, before which judge, and which way the trend is moving — every claim
         traceable to a real decision.
       </p>
