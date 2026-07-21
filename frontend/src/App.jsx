@@ -5,6 +5,7 @@ import DecisionPage from './pages/DecisionPage'
 import ReportsPage from './pages/ReportsPage'
 import AljIndexPage from './pages/AljIndexPage'
 import AljProfilePage from './pages/AljProfilePage'
+import AdminPage from './pages/AdminPage'
 import NoAccess from './pages/NoAccess'
 
 export default function App() {
@@ -18,6 +19,8 @@ export default function App() {
         <Route path="/alj" element={<AljIndexPage />} />
         <Route path="/alj/:name" element={<AljProfilePage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        {/* Admin-only; the API enforces ADMIN_TOKENS, this route just renders it. */}
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<SearchPage />} />
       </Route>
     </Routes>

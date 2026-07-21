@@ -200,3 +200,11 @@ export function track(eventType, payload = {}) {
     /* analytics must never break the app */
   }
 }
+
+/**
+ * Admin-only usage stats (/api/admin/stats). Throws with err.status 403 when
+ * the caller's token is valid but not listed in ADMIN_TOKENS.
+ */
+export function getAdminStats(signal) {
+  return getJSON('/api/admin/stats', signal)
+}

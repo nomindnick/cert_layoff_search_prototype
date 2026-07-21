@@ -10,7 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 
 from backend import analytics
-from backend.auth import get_user, require_user
+from backend.auth import get_user, is_admin, require_user
 from backend.models import EventIn
 
 router = APIRouter(prefix="/api", tags=["events"])
@@ -24,4 +24,6 @@ def post_event(event: EventIn, request: Request, _token: str = Depends(require_u
 
 @router.get("/me")
 def me(request: Request, _token: str = Depends(require_user)):
-    return {"name": get_user(request)}
+    # is_admin drives whether the SPA renders the Usage nav link at all, so a
+    # non-admin never sees the admin surface exists.
+    return {"name": get_user(request), "is_admin": is_admin(request)}

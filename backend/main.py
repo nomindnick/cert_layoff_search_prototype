@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 # Router module names to include under /api (owned by other agents).
-_ROUTER_MODULES = ("search", "decisions", "facets", "events", "reports", "alj")
+_ROUTER_MODULES = ("search", "decisions", "facets", "events", "reports", "alj", "admin")
 
 # MCP server (remote, streamable-HTTP) mounted at /mcp. Guarded so the core app
 # still boots if the `mcp` SDK isn't installed. Calling streamable_http_app()

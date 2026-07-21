@@ -10,14 +10,17 @@ import { bootstrapToken, getMe, track } from '../lib/api'
  */
 export default function Layout() {
   const location = useLocation()
+  // Whole /api/me payload ({name, is_admin}) — is_admin gates the Usage link,
+  // so a non-admin never sees that the admin surface exists.
   const [me, setMe] = useState(null)
+  const name = me?.name || null
 
   // Token bootstrap + identity check, once on mount.
   useEffect(() => {
     bootstrapToken()
     const controller = new AbortController()
     getMe(controller.signal)
-      .then((data) => setMe(data?.name || null))
+      .then((data) => setMe(data || null))
       .catch((err) => {
         // 401 already redirects inside api.js; swallow others (backend warming up).
         if (err?.status !== 401) setMe(null)
@@ -55,19 +58,20 @@ export default function Layout() {
             <HeaderLink to="/">Search</HeaderLink>
             <HeaderLink to="/alj">ALJ Profiles</HeaderLink>
             <HeaderLink to="/reports">Reports</HeaderLink>
+            {me?.is_admin && <HeaderLink to="/admin">Usage</HeaderLink>}
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden md:inline text-xs text-text-muted">
               California OAH certificated-layoff decisions
             </span>
-            {me && (
+            {name && (
               <span
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary bg-surface-soft border border-border-light rounded-full pl-2 pr-2.5 py-1"
-                title={`Signed in as ${me}`}
+                title={`Signed in as ${name}`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                {me}
+                {name}
               </span>
             )}
           </div>

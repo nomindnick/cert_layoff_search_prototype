@@ -36,6 +36,20 @@ def _parse_tokens(raw: str) -> dict[str, str]:
 TOKENS: dict[str, str] = _parse_tokens(settings.ACCESS_TOKENS)
 
 
+def _parse_admins(raw: str) -> set[str]:
+    """Parse ``tok,tok2`` (names optional, ignored) into a set of admin tokens."""
+    out: set[str] = set()
+    for entry in (raw or "").split(","):
+        tok = entry.strip().partition(":")[0].strip()
+        if tok:
+            out.add(tok)
+    return out
+
+
+# Admin tokens are a SUBSET of TOKENS — being a valid user never implies admin.
+ADMINS: set[str] = _parse_admins(settings.ADMIN_TOKENS)
+
+
 def current_token(request: Request) -> str | None:
     """Return the raw token presented on the request (header > query > cookie),
     regardless of validity. Used for analytics enrichment."""
@@ -67,5 +81,28 @@ def require_user(request: Request) -> str:
         raise HTTPException(
             status_code=401,
             detail="Invalid or missing access token — ask Nick for a link.",
+        )
+    return tok
+
+
+def is_admin(request: Request) -> bool:
+    """True when the presented token is both valid and listed in ADMIN_TOKENS."""
+    tok = current_token(request)
+    return bool(tok) and tok in TOKENS and tok in ADMINS
+
+
+def require_admin(request: Request) -> str:
+    """FastAPI dependency for the admin surface: a valid token that is also in
+    ADMIN_TOKENS. 401 for a bad token, 403 for a valid-but-not-admin one.
+
+    The 403 message names ADMIN_TOKENS on purpose — the likeliest cause is the
+    env var being unset on the deploy, and a silent 404 would make that look
+    like a routing bug.
+    """
+    tok = require_user(request)
+    if tok not in ADMINS:
+        raise HTTPException(
+            status_code=403,
+            detail="This page is admin-only (token not listed in ADMIN_TOKENS).",
         )
     return tok

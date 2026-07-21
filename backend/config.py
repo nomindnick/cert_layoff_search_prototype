@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     # --- Auth: "tok:Display Name,tok2:Name2" ---
     ACCESS_TOKENS: str = "demo:Demo User"
 
+    # --- Admin: comma-separated subset of ACCESS_TOKENS allowed to read
+    # /api/admin/* (the usage dashboard). Empty = nobody, which is the secure
+    # default: a token being valid never implies it is an admin token. ---
+    ADMIN_TOKENS: str = ""
+
     # --- Embeddings: none|arctic|openai. v1 serves BM25-only ("none"). ---
     EMBED_BACKEND: str = "none"
     OPENAI_API_KEY: str = ""
