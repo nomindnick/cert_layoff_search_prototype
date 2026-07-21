@@ -21,7 +21,8 @@ retrieval + analytics + deterministic reports. **Not a chatbot.**
 - Access = **per-person magic links** (token = auth + analytics user id + share-detector).
 - **No generative AI in v1.** LLM report-summary deferred to v2.
 - Embeddings = **arctic-l-v2** (`Snowflake/snowflake-arctic-embed-l-v2.0`) on CPU.
-- Corpus slice ≈ **666 decisions** (see below) + 5,608 gold holdings.
+- Corpus slice = **1,544 decisions** (see below) + 5,608 gold holdings (5,454 indexed;
+  the rest are volume headers/front-matter, filtered at build time).
 
 ## Critical conventions (easy to get wrong)
 - **Primary search unit is the *holding*, not the document** — grouped by decision in the UI.
@@ -29,7 +30,9 @@ retrieval + analytics + deterministic reports. **Not a chatbot.**
   result layer is "District (ALJ)"-safe). Source PDFs + the in-app `full_text` reader retain
   names — that's acceptable (relaxed privacy, public records). Keep a name-scrub gate
   available but off.
-- **Win-rate is skewed ~79% district** — always show it per-issue *against the corpus
+- **Win-rate is skewed ~73% district** (0.7346 over the full 1,544-decision corpus; it
+  was ~79% on the old 666-decision slice — the baseline MOVED, so any hard-coded 79%
+  anywhere is a bug) — always show it per-issue *against the corpus
   baseline*, never as a bare percentage.
 - **Log analytics from day one** — every search logs the query + ranked `shown` ids; every
   click/open/download logs the target. This is the project's highest-value byproduct
@@ -38,8 +41,11 @@ retrieval + analytics + deterministic reports. **Not a chatbot.**
 - **Don't expose raw relevance scores** to the client; rank only.
 
 ## Data slice (see `PLAN.md §4`)
-- Spine: `cert_layoff_corpus/output/corpus/decisions/` — **412 decisions, all v0.4.0**.
-- Union in: lab `cert_layoff_lab/output/corpus/decisions/` **2004 + 2009 only** (254, v0.2.0).
+- Spine: `cert_layoff_corpus/output/corpus/decisions/` — **1,487 decisions, all v0.4.0**,
+  spanning 1999–2025 (corpus completed 2026-07; was 412).
+- Union in: lab `cert_layoff_lab/output/corpus/decisions/` **2004 only** (57, v0.2.0).
+  The lab's 2009 records are now all in the spine, so `make_slice.py` drops them on stem
+  collision; only 2004 still has real lab-only coverage (spine has just 17 for that year).
 - **Do NOT use `cert_layoff_merged`** — it's stale (old 174-record build).
 - Load via `cert_layoff_playground/corpuslib/corpus.py` (schema-tolerant; derives year from
   the OAH case-number prefix when `decision_date` is null). Don't access raw schema fields

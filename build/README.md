@@ -23,11 +23,12 @@ The pipeline reads from a staging slice at `build/corpus_slice/`, produced by
 `cert_layoff_merged` build, unioning the two live sources directly:
 
 - production spine — `cert_layoff_corpus/output/corpus/decisions/*.json`
-  (412 records, schema 0.4.0)
+  (1487 records, schema 0.4.0, 1999–2025)
 - lab fill — `cert_layoff_lab/output/corpus/decisions/{2004,2009}*.json`
-  (267 records, schema 0.2.0)
+  (57 records, schema 0.2.0 — all 2004; the lab's 2009 set is now fully carried
+  by the spine and drops out on stem collision)
 
-= **679 decisions**, plus the production gold holdings + taxonomy under
+= **1544 decisions**, plus the production gold holdings + taxonomy under
 `cert_layoff_corpus/output/summaries/` (symlinked into the slice).
 
 Every script honors a `CORPUS_ROOT` env override; absent it, they default to
@@ -85,6 +86,11 @@ R2_BUCKET=<your-bucket> python build/upload_r2.py
 - Pickles are content-hashed over `(ids, texts, model_id)` and written
   atomically; an unchanged corpus/model reuses the existing pickle. `--force`
   rebuilds anyway.
+- Decision ids come from `canonical_case_no()` (build_index.py): `identity.oah_case_no`
+  when its digits match the filename stem, else the stem. ~2% of records carry a
+  garbled or body-text-lifted `oah_case_no`; six such values collided across 13 files
+  and silently dropped 7 decisions from `records.json`. Ids for clean records are
+  unchanged, so existing deep links and logged analytics still resolve.
 - Year is derived robustly: `stem[:4]` when it's a clean 19xx/20xx year, else
   `identity.decision_date[:4]`, else `identity.school_year_affected[:4]`.
 - De-identification (`corpuslib/deident.py`) is copied verbatim from the

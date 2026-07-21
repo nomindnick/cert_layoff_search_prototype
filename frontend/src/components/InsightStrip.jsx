@@ -5,7 +5,7 @@ import { titleize, pct } from '../lib/format'
  * The analytical heart of the app (PLAN.md §10). Given the `insight` object
  * from /api/search, render:
  *   - a win-rate bar (district share) with the corpus baseline marked, because
- *     the base rate is skewed ~79% district — the delta is the signal.
+ *     the base rate is skewed ~73% district — the delta is the signal.
  *   - top sub-issues and most-active ALJs over the match set.
  *   - an inline-SVG sparkline of the per-year trend, split district vs respondent.
  *

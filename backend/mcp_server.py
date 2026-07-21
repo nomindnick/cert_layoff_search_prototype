@@ -6,7 +6,7 @@ service at ``/mcp`` (see backend/main.py) — it reuses the indexes already load
 in RAM via ``backend.store.store``; no separate process or second copy.
 
 Design choices that matter (per PLAN.md thesis — "the UI does the analytical
-work; outcome data skews ~79% district"):
+work; outcome data skews ~73% district"):
   * every search response carries the per-issue ``insight`` block INCLUDING the
     corpus ``baseline_district`` win-rate, so the model is nudged to read
     win-rate against the baseline rather than quoting a bare percentage;
@@ -58,7 +58,7 @@ _INSTRUCTIONS = (
     "Structured search over California OAH proposed decisions on certificated "
     "(teacher) layoffs. The unit is the HOLDING, grouped by decision. Results "
     "are non-precedential and de-identified to 'District (ALJ)'. IMPORTANT: "
-    "outcome data skews ~79% district-win corpus-wide — always read a slice's "
+    "outcome data skews ~73% district-win corpus-wide — always read a slice's "
     "win_rate against insight.win_rate.baseline_district, never as a bare "
     "percentage. Every result is traceable to a real decision via its "
     "holding_id / oah_case_no; cite those, and prefer quoting the returned "

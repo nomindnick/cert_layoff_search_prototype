@@ -87,7 +87,13 @@ def deidentify(text, rec):
     subs = []  # (match string, ref)
     firsts = set()  # roster first-name tokens, for the stranded-name pass
     for r in (rec.get("outcome") or {}).get("roster") or []:
-        name, ref = (r.get("name") or "").strip(), r.get("ref")
+        # Normalize before parsing: a stray leading/trailing comma ("Jessica
+        # Fleshner,") otherwise reads as the "Last, First" form with an empty
+        # first name, which both crashes the firsts pass and — worse — leaves
+        # the bare surname without a substitution rule, leaking it into the
+        # index. Well-formed "Last, First" values are unaffected.
+        name = re.sub(r"\s+", " ", (r.get("name") or "").strip().strip(",").strip())
+        ref = r.get("ref")
         if not name or not ref:
             continue
         if "," in name:  # "Last, First" form

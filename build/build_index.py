@@ -83,6 +83,23 @@ def derive_year(stem, rec):
     return ""
 
 
+def canonical_case_no(stem, rec):
+    """The id for a decision across every artifact (indexes + served records).
+
+    Prefers identity.oah_case_no so the familiar "N"-prefixed form is kept, but
+    only when its digits actually match the filename stem. The stem is the
+    canonical OAH number and is unique by construction; oah_case_no is an
+    extracted field and ~2% of the corpus carries OCR noise ("N2003030I93",
+    "N 20000030035") or, worse, a case number lifted out of the body text. Six
+    such values collided across 13 files, which silently dropped 7 decisions
+    from the records dict. On any mismatch the stem wins."""
+    ident = rec.get("identity") or {}
+    oah = ident.get("oah_case_no")
+    if oah and re.sub(r"\D", "", str(oah)) == re.sub(r"\D", "", stem or ""):
+        return oah
+    return stem
+
+
 def holding_text(h):
     """The searchable composition for one extracted holding: issue statement +
     house-style paragraph + reasoning summary."""
@@ -98,7 +115,7 @@ def build_holdings_docs():
     ids, texts, metas = [], [], []
     for stem, rec in load_decisions():
         ident = rec.get("identity") or {}
-        case_no = ident.get("oah_case_no") or stem
+        case_no = canonical_case_no(stem, rec)
         district_raw = (ident.get("district") or {}).get("raw") or ""
         alj_raw = (ident.get("alj") or {}).get("raw") or ""
         outcome = rec.get("outcome") or {}
@@ -160,7 +177,7 @@ def build_decision_docs():
     ids, texts, metas = [], [], []
     for stem, rec in load_decisions():
         ident = rec.get("identity") or {}
-        case_no = ident.get("oah_case_no") or stem
+        case_no = canonical_case_no(stem, rec)
         district_raw = (ident.get("district") or {}).get("raw") or ""
         alj_raw = (ident.get("alj") or {}).get("raw") or ""
         # de-identify the full text that feeds the BM25 decisions index — the

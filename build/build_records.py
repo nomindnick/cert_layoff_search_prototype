@@ -10,7 +10,9 @@ BUILD time, and roster names are DROPPED entirely — the served layer is
 "District (ALJ)"-safe by construction. The original PDFs on R2 keep names
 (acceptable per the relaxed-privacy stance).
 
-case_no keys are the identity.oah_case_no form (with the leading "N").
+case_no keys come from build_index.canonical_case_no(): the identity.oah_case_no
+form (with the leading "N") when its digits match the filename stem, else the
+stem — see build/README.md. Keys are unique by construction.
 pdf_url = $R2_DOC_BASE_URL (may be empty) + /docs/{year}/{stem}.pdf, where stem
 is the year-prefixed filename stem (no "N"), matching convert_docs.py output.
 
@@ -30,7 +32,7 @@ os.environ.setdefault("CORPUS_ROOT", str(HERE / "corpus_slice"))
 
 from corpuslib import load_decisions, load_gold_holdings, load_taxonomy  # noqa: E402
 from corpuslib.deident import alj_surname, deidentify, district_short  # noqa: E402
-from build_index import derive_year  # noqa: E402  (robust year derivation)
+from build_index import canonical_case_no, derive_year  # noqa: E402
 
 OUT = HERE / "output"
 
@@ -151,7 +153,7 @@ def served_record(stem, rec):
     """Project + de-identify a full decision record into the served shape.
     Roster names are DROPPED; only the count is kept."""
     ident = rec.get("identity") or {}
-    case_no = ident.get("oah_case_no") or stem
+    case_no = canonical_case_no(stem, rec)
     district_raw = (ident.get("district") or {}).get("raw") or ""
     alj_raw = (ident.get("alj") or {}).get("raw") or ""
     year = derive_year(stem, rec)
@@ -244,7 +246,7 @@ def build_metadata(records):
                 if pp == "district":
                     dist_win += 1
 
-    baseline = round(dist_win / party_total, 4) if party_total else 0.79
+    baseline = round(dist_win / party_total, 4) if party_total else 0.7346
 
     # Gold holdings count (rows with a real category, per the index convention).
     n_gold = 0

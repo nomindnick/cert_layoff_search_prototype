@@ -5,7 +5,7 @@ signal the UI leads with: win-rate vs the corpus baseline, top sub-issues,
 most-active ALJs, and a per-year trend split by prevailing party. All counts
 are computed from ``hit["meta"]`` (the de-identified holding meta), never from
 relevance scores. The win-rate baseline is always shown because the corpus is
-heavily skewed toward district wins (~79%) — the deviation is the signal.
+heavily skewed toward district wins (~73%) — the deviation is the signal.
 """
 
 from __future__ import annotations

@@ -2,8 +2,9 @@
 """Stage the corpus slice the rest of the build reads from.
 
 Builds a fresh staging root at build/corpus_slice/:
-  corpus/decisions/   symlinks to every production decision (412, schema 0.4.0)
-                      + the lab's 2004*/2009* decisions (267, schema 0.2.0)
+  corpus/decisions/   symlinks to every production decision (1487, schema 0.4.0)
+                      + the lab's 2004*/2009* decisions that production does not
+                      already carry (57, schema 0.2.0 — all 2004)
   summaries/          a symlink to the production summaries dir (gold holdings,
                       taxonomy, case_index)
 
@@ -11,6 +12,10 @@ This is the corrected replacement for the stale cert_layoff_merged build (which
 pointed at an old 174-record corpus). We union the two live sources directly:
   - cert_layoff_corpus/output/corpus/decisions/*.json      (production spine)
   - cert_layoff_lab/output/corpus/decisions/{2004,2009}*.json  (mid-decade fill)
+
+Since the corpus was completed (2026-07) the spine covers 2009 in full, so the
+lab fill collapses from 267 to 57 records — all 2004, where the spine is thin
+(17). The collision rule below does this automatically; nothing to configure.
 
 Symlinks (not copies) keep the slice cheap and always current with the sources.
 On a name collision (same stem in both sources) the production record wins.

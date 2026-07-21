@@ -21,7 +21,9 @@ from backend.search.engine import COLLECTIONS, Engine
 logger = logging.getLogger(__name__)
 
 # Default baseline district win-rate, used if metadata is missing the stat.
-DEFAULT_BASELINE = 0.79
+# 0.7346 over the full 1,544-decision corpus. Was 0.79 on the old 666-decision
+# slice — keep this in step with metadata.json's baseline_district_win_rate.
+DEFAULT_BASELINE = 0.7346
 
 
 def _normalize_case_no(case_no):
