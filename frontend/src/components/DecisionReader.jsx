@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { titleize, humanize, formatDate, outcomeMeta } from '../lib/format'
 import { track } from '../lib/api'
@@ -15,6 +16,9 @@ import { track } from '../lib/api'
  *     n_respondents, holdings:[...], full_text, pdf_url }
  */
 export default function DecisionReader({ record }) {
+  // Declared before the early return — hooks must run unconditionally.
+  const [pdfNote, setPdfNote] = useState(false)
+
   if (!record) return null
 
   const board = record.board_action || {}
@@ -23,6 +27,13 @@ export default function DecisionReader({ record }) {
 
   function onDownload() {
     track('download_pdf', { target_id: record.oah_case_no })
+  }
+
+  // Source PDFs are not hosted yet. The control stays live and still tracks, so
+  // reaching for the original is countable demand for the hosting decision.
+  function onDownloadPending() {
+    track('download_pdf', { target_id: record.oah_case_no, filters: { pending: true } })
+    setPdfNote(true)
   }
 
   return (
@@ -78,7 +89,7 @@ export default function DecisionReader({ record }) {
           )}
         </div>
 
-        {record.pdf_url && (
+        {record.pdf_url ? (
           <a
             href={record.pdf_url}
             target="_blank"
@@ -86,11 +97,30 @@ export default function DecisionReader({ record }) {
             onClick={onDownload}
             className="inline-flex items-center gap-1.5 mt-4 px-3.5 py-2 rounded-lg border border-accent text-accent text-sm font-medium hover:bg-accent-light transition-colors no-underline"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
-            </svg>
+            <DownloadIcon />
             Download original PDF
           </a>
+        ) : (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={onDownloadPending}
+              aria-describedby={pdfNote ? 'pdf-pending-note' : undefined}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-dashed border-border text-text-secondary text-sm font-medium hover:border-accent hover:text-accent transition-colors"
+            >
+              <DownloadIcon />
+              Original PDF
+              <span className="ml-1 px-1.5 py-0.5 rounded bg-surface border border-border-light text-[0.65rem] font-semibold uppercase tracking-wide text-text-muted">
+                Coming soon
+              </span>
+            </button>
+            {pdfNote && (
+              <p id="pdf-pending-note" className="mt-2 max-w-prose text-sm text-text-secondary animate-fade-in">
+                The original PDFs aren&rsquo;t hosted yet &mdash; that&rsquo;s coming. The complete text
+                of this decision is reproduced below, so nothing from the record is missing here.
+              </p>
+            )}
+          </div>
         )}
       </header>
 
@@ -354,6 +384,14 @@ function splitParagraphs(text) {
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean)
+}
+
+function DownloadIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+    </svg>
+  )
 }
 
 function Dot() {
